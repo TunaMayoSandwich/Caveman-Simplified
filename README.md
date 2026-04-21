@@ -10,7 +10,7 @@ caveman instructions without the bloat
 use any free/pro account, platform , chat, app, wrapper etc
 
 <p align="center">
-  <img src="https://github.com/TunaMayoSandwich/caveman-simplified/blob/main/tokenizer.png"/>
+  <img src="https://github.com/TunaMayoSandwich/caveman-simplified/blob/main/image.png"/>
 </p>
 
 caveman claude skill repo: 
