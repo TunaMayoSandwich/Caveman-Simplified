@@ -4,14 +4,13 @@
 
 <h1 align="center">🥪 Caveman Simplified</h1>
 
-**why use many pretokens when few do trick**
-
-caveman instructions without the bloat
-use any free/pro account, platform , chat, app, wrapper etc
+<p align="center"><b>why use many pretokens when few do trick</b></p>
 
 <p align="center">
-  <img src="https://github.com/TunaMayoSandwich/caveman-simplified/blob/main/image.png"/>
+  <img src="https://github.com/TunaMayoSandwich/caveman-simplified/blob/main/image.png" />
 </p>
 
-caveman claude skill repo: 
+---
+
+Caveman Claude skill:  
 https://github.com/JuliusBrussee/caveman
