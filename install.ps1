@@ -10,10 +10,9 @@
 #
 # Run `install.ps1 -Help` for the full reference (flags + agent matrix).
 #
-# Defaults: -WithHooks ON when Claude Code is detected, -WithMcpShrink OFF
-# (opt-in until the proxy ships on npm), -WithInit OFF. Use -Minimal to skip
-# everything except the plugin/extension install. Use -All to also drop
-# per-repo rule files into $PWD.
+# Defaults: -WithHooks ON, -WithMcpShrink ON (when Claude Code is detected),
+# -WithInit OFF. Use -Minimal to skip everything except the plugin/extension
+# install. Use -All to also drop per-repo rule files into $PWD.
 
 [CmdletBinding()]
 param(
@@ -61,9 +60,8 @@ FLAGS
   -WithHooks       Claude Code: also wire SessionStart/UserPromptSubmit hooks
                    + statusline + stats badge. ON by default.
   -NoHooks         Opt out of the default-on hooks install.
-  -WithMcpShrink   Claude Code: register caveman-shrink MCP proxy. OFF by default
-                   until the package ships on npm.
-  -NoMcpShrink     Reserved opt-out (currently a no-op since the default is OFF).
+  -WithMcpShrink   Claude Code: register caveman-shrink MCP proxy. ON by default.
+  -NoMcpShrink     Opt out of the default-on MCP shrink registration.
   -WithInit        Drop per-repo rule files into `$PWD for Cursor / Windsurf /
                    Cline / Copilot / AGENTS.md. OFF by default.
   -SkipSkills      Don't run the npx-skills auto-detect fallback.
@@ -97,13 +95,14 @@ if ($All) {
   $WithInit = $true
   $WithMcpShrink = $true
 }
-# Default-auto: -WithHooks defaults ON (unless -Minimal or -NoHooks).
-# -WithMcpShrink stays opt-in until 'caveman-shrink' ships on npm — auto-on
-# would register an `npx -y caveman-shrink` config that 404s on first use.
+# Default-auto: turn ON unless caller passed -Minimal or the explicit -No*
+# opt-out switch.
 if (-not $WithHooks -and -not $NoHooks -and -not $Minimal) {
   $WithHooks = $true
 }
-if ($NoMcpShrink) { $WithMcpShrink = $false }
+if (-not $WithMcpShrink -and -not $NoMcpShrink -and -not $Minimal) {
+  $WithMcpShrink = $true
+}
 if ($Minimal) {
   $WithHooks = $false
   $WithMcpShrink = $false
@@ -345,9 +344,8 @@ if ($List) {
   Note "  Detection probes per agent live in install.ps1 \$Providers."
   Note "  Soft entries detect via config-dir presence only (no CLI on PATH)."
   Write-Host ""
-  Note "  Defaults: -WithHooks ON, -WithMcpShrink OFF, -WithInit OFF."
+  Note "  Defaults: -WithHooks ON, -WithMcpShrink ON, -WithInit OFF."
   Note "  -All turns all three on, -Minimal turns all three off."
-  Note "  -WithMcpShrink will resolve once 'caveman-shrink' is published to npm."
   exit 0
 }
 
@@ -426,22 +424,22 @@ function Install-Claude {
     }
   }
 
-  # -WithMcpShrink: register the proxy. Until 'caveman-shrink' ships on npm,
-  # registration would store a config that 404s the first time Claude tries
-  # to spawn it. Probe npm first and bail out cleanly if missing.
+  # -WithMcpShrink: register the proxy. Probe npm first so a transient
+  # registry outage downgrades to a clean manual-config skip instead of
+  # registering an `npx -y caveman-shrink` entry that 404s on every spawn.
   if ($WithMcpShrink) {
     Say "  → wiring caveman-shrink MCP proxy (-WithMcpShrink)"
-    $packageOnNpm = $false
     if (Has-Cmd "npm") {
+      $packageOnNpm = $false
       try { $null = & npm view $McpShrinkPkg 2>$null; $packageOnNpm = ($LASTEXITCODE -eq 0) } catch {}
-    }
-    if (-not $packageOnNpm) {
-      Warn "    'npm view $McpShrinkPkg' returned no metadata — package not on npm yet."
-      Note "    Skipping registration. Re-run with -WithMcpShrink once the package is published,"
-      Note "    or copy the snippet below into your MCP config and point it at a local clone."
-      Record-Skipped "caveman-shrink" "package not on npm yet"
-      Write-Host ""
-      return
+      if (-not $packageOnNpm) {
+        Warn "    'npm view $McpShrinkPkg' returned no metadata — registry unreachable or package missing."
+        Note "    Skipping registration. Re-run -WithMcpShrink when the registry is reachable,"
+        Note "    or copy the snippet below into your MCP config and point it at a local clone."
+        Record-Skipped "caveman-shrink" "npm registry probe failed"
+        Write-Host ""
+        return
+      }
     }
     $hasMcpAdd = $false
     if (Has-Cmd "claude") {

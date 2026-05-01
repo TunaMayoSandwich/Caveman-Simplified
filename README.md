@@ -141,7 +141,7 @@ irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | i
 
 Detects 30+ agents (Claude Code, Gemini CLI, Codex, Cursor, Windsurf, Cline, Copilot, Continue, Kilo, Roo, Augment, Aider Desk, Amp, Bob, Crush, Devin, Droid, ForgeCode, Goose, iFlow, JetBrains Junie, Kiro CLI, Mistral Vibe, OpenHands, opencode, Qwen Code, Qoder, Rovo Dev, Tabnine, Trae, Warp, Replit Agent, Antigravity, …). Runs each one's native install. Skips what you not have. Safe to re-run.
 
-By default the installer wires Claude Code's hooks + statusline + stats badge on top of the plugin install. Pass `--minimal` to skip the hooks and just install the plugin/extension. Pass `--all` to also drop per-repo rule files into the current directory and register the [`caveman-shrink`](#caveman-shrink-mcp-middleware) MCP proxy.
+By default the installer wires Claude Code's hooks + statusline + stats badge and registers the [`caveman-shrink`](#caveman-shrink-mcp-middleware) MCP proxy on top of the plugin install. Pass `--minimal` to skip the extras and just install the plugin/extension. Pass `--all` to also drop per-repo rule files into the current directory.
 
 | Flag | What |
 |---|---|
@@ -150,7 +150,7 @@ By default the installer wires Claude Code's hooks + statusline + stats badge on
 | `--dry-run` | Preview, write nothing |
 | `--only <agent>` | One target only (repeatable) |
 | `--with-hooks` | Claude Code: also wire standalone hooks + statusline + stats badge. **On by default.** |
-| `--with-mcp-shrink` | Claude Code: register the [caveman-shrink](#caveman-shrink-mcp-middleware) MCP proxy. Opt-in until the package ships on npm. |
+| `--with-mcp-shrink` | Claude Code: register the [caveman-shrink](#caveman-shrink-mcp-middleware) MCP proxy via `npx caveman-shrink`. **On by default.** |
 | `--with-init` | Drop always-on rule files into the current repo (Cursor / Windsurf / Cline / Copilot / AGENTS.md). Off by default; turned on by `--all`. |
 | `--list` | Print full agent matrix and exit |
 | `--force` | Re-run even if already installed |
@@ -229,7 +229,7 @@ Level stick until you change it or session end.
 | `/caveman-help` | Quick-reference card. All modes, skills, commands. |
 | `/caveman-stats` | Real session token usage + estimated savings + USD. Lifetime aggregation via `--all`, time window via `--since 7d`, tweetable line via `--share`. Reads the Claude Code session JSONL directly, no model-side guessing. Claude Code only. |
 | `/caveman:compress <file>` | Rewrites a memory file (e.g. `CLAUDE.md`) into caveman-speak. Saves backup as `<file>.original.md`. Cuts ~46% of *input* tokens every session start. Code/URLs/paths preserved byte-for-byte. |
-| `cavecrew-investigator/builder/reviewer` | Caveman subagents for Claude Code. Subagent tool-output gets injected back into main context — these emit ~60% fewer tokens than vanilla `Explore` / reviewer agents, so main context lasts longer across long sessions. Investigator (read-only locator), builder (1-2 file surgical edit, refuses 3+), reviewer (one-line findings). |
+| `cavecrew-investigator/builder/reviewer` | Caveman subagents for Claude Code. Subagent tool-output gets injected back into main context — these emit ~60% fewer tokens than vanilla `Explore` / reviewer agents, so main context lasts longer across long sessions. Investigator (read-only locator, haiku), builder (1-2 file surgical edit, refuses 3+), reviewer (one-line findings, haiku). |
 
 **Statusline savings badge** — on by default. After your first `/caveman-stats` run the statusline appends `[CAVEMAN] ⛏ 12.4k` (lifetime tokens saved) and updates every time `/caveman-stats` runs. Don't want it? Set `CAVEMAN_STATUSLINE_SAVINGS=0` to silence.
 
@@ -261,7 +261,7 @@ Stdio proxy that wraps any MCP server, intercepts `tools/list` / `prompts/list` 
 }
 ```
 
-V1 does not touch tool-call response bodies or request payloads. Register via `install.sh --with-mcp-shrink` once `npx caveman-shrink` resolves on npm. Full docs: [`mcp-servers/caveman-shrink/`](mcp-servers/caveman-shrink).
+Published on npm as [`caveman-shrink`](https://www.npmjs.com/package/caveman-shrink). V1 does not touch tool-call response bodies or request payloads. Auto-registered by `install.sh` (use `--minimal` to skip). Full docs: [`mcp-servers/caveman-shrink/`](mcp-servers/caveman-shrink).
 
 ## Benchmarks
 

@@ -21,17 +21,17 @@ INIT_SCRIPT_URL="$RAW_BASE/tools/caveman-init.js"
 MCP_SHRINK_PKG="caveman-shrink"
 
 # ── Flags + state (no associative arrays — bash 3.2 safe) ──────────────────
-# WITH_HOOKS defaults to "auto" → ON unless --minimal is set. WITH_MCP_SHRINK
-# stays opt-in until the caveman-shrink npm package is published; auto-on
-# would register an `npx -y caveman-shrink` config that 404s on first use.
-# WITH_INIT also opt-in because it writes per-repo rule files into $PWD —
-# too surprising for a bare curl|bash.
+# WITH_HOOKS / WITH_MCP_SHRINK default to "auto" → ON unless --minimal is set
+# or the caller passed an explicit override. WITH_INIT stays opt-in because
+# it writes per-repo rule files into $PWD — too surprising for bare curl|bash.
+# We still probe `npm view caveman-shrink` before registration so a transient
+# npm outage downgrades to a manual-snippet skip instead of a broken config.
 DRY=0
 FORCE=0
 SKIP_SKILLS=0
 WITH_HOOKS=auto
 WITH_INIT=0
-WITH_MCP_SHRINK=0
+WITH_MCP_SHRINK=auto
 ALL=0
 MINIMAL=0
 LIST_ONLY=0
@@ -78,8 +78,7 @@ FLAGS
                         Cursor/Windsurf/Cline/Copilot/AGENTS.md. Off by default.
   --with-mcp-shrink     Claude Code: register the caveman-shrink MCP middleware
                         proxy (or print the JSON snippet for manual setup).
-                        Off by default until the proxy is published to npm —
-                        opt in once `npx caveman-shrink` resolves.
+                        On by default — pass --minimal to skip.
   --list                Print the full provider matrix and exit.
   --no-color            Disable ANSI color codes (auto-disabled on non-TTY).
   -h, --help            Show this help and exit.
@@ -192,7 +191,7 @@ if [ "$MINIMAL" = 1 ]; then
   WITH_INIT=0
 fi
 [ "$WITH_HOOKS" = "auto" ] && WITH_HOOKS=1
-# WITH_MCP_SHRINK has no "auto" value — opt-in until the proxy is on npm.
+[ "$WITH_MCP_SHRINK" = "auto" ] && WITH_MCP_SHRINK=1
 
 # ── Color helpers ──────────────────────────────────────────────────────────
 if [ "$NO_COLOR" = 1 ]; then
@@ -367,9 +366,8 @@ if [ "$LIST_ONLY" = 1 ]; then
   note "  Detection probes per agent live in install.sh PROVIDER_DETECT."
   note "  Soft entries detect via config-dir presence only (no CLI on PATH)."
   echo
-  note "  Defaults: --with-hooks ON, --with-mcp-shrink OFF, --with-init OFF."
+  note "  Defaults: --with-hooks ON, --with-mcp-shrink ON, --with-init OFF."
   note "  --all turns all three on, --minimal turns all three off."
-  note "  --with-mcp-shrink will resolve once 'caveman-shrink' is published to npm."
   exit 0
 fi
 
@@ -506,16 +504,17 @@ install_claude() {
     fi
   fi
 
-  # --with-mcp-shrink: register the proxy (or print the snippet). Until the
-  # npm package is published, warn the user that registration will register a
-  # config that 404s the first time Claude tries to spawn it.
+  # --with-mcp-shrink: register the proxy (or print the snippet). Probe the
+  # npm registry first so a transient registry outage degrades to a clean
+  # manual-config skip instead of registering an `npx -y caveman-shrink`
+  # entry that 404s every time Claude tries to spawn it.
   if [ "$WITH_MCP_SHRINK" = 1 ]; then
     say "  → wiring caveman-shrink MCP proxy (--with-mcp-shrink)"
-    if ! npm view "$MCP_SHRINK_PKG" >/dev/null 2>&1; then
-      warn "    'npm view $MCP_SHRINK_PKG' returned no metadata — package not on npm yet."
-      note "    Skipping registration. Re-run with --with-mcp-shrink once the package is published,"
+    if has npm && ! npm view "$MCP_SHRINK_PKG" >/dev/null 2>&1; then
+      warn "    'npm view $MCP_SHRINK_PKG' returned no metadata — registry unreachable or package missing."
+      note "    Skipping registration. Re-run --with-mcp-shrink when the registry is reachable,"
       note "    or copy the snippet below into your MCP config and point it at a local clone."
-      record_skipped "caveman-shrink" "package not on npm yet"
+      record_skipped "caveman-shrink" "npm registry probe failed"
     elif has claude && claude mcp --help >/dev/null 2>&1; then
       # Newer Claude Code CLIs expose `claude mcp add`. Wrap stdio: proxy
       # spawns the upstream as a child. Without an upstream the proxy is a
